@@ -15,6 +15,7 @@ mod selector;
 #[cfg(test)]
 mod tests;
 pub mod utils;
+pub mod drawing;
 
 pub use element::{UIElement, UIElementAttributes};
 pub use errors::AutomationError;
@@ -49,6 +50,7 @@ pub struct ScreenshotResult {
 /// The main entry point for UI automation
 pub struct Desktop {
     engine: Arc<dyn platforms::AccessibilityEngine>,
+    visualizer: Option<drawing::OverlayEngine>,
 }
 
 impl Desktop {
@@ -70,8 +72,21 @@ impl Desktop {
             "Desktop automation engine initialized"
         );
         
+        // Initialize the visualizer if possible, but don't fail if it can't be initialized
+        let visualizer = match drawing::OverlayEngine::new() {
+            Ok(v) => {
+                info!("Visualization engine initialized");
+                Some(v)
+            }
+            Err(e) => {
+                warn!(error = ?e, "Failed to initialize visualization engine");
+                None
+            }
+        };
+        
         Ok(Self {
             engine: Arc::from(engine),
+            visualizer,
         })
     }
 
@@ -379,5 +394,162 @@ impl Desktop {
         );
         
         Ok(window)
+    }
+    
+    // Visualization methods
+    
+    /// Highlight UI elements on screen
+    #[instrument(skip(self, elements, style, effect))]
+    pub fn highlight_elements(
+        &self,
+        elements: &[UIElement],
+        style: Option<drawing::HighlightStyle>,
+        effect: Option<drawing::HighlightEffect>,
+    ) -> Result<(), AutomationError> {
+        let start = Instant::now();
+        info!(element_count = elements.len(), "Highlighting elements");
+        
+        if let Some(visualizer) = &self.visualizer {
+            if !visualizer.is_enabled() {
+                warn!("Visualization engine is not enabled");
+                return Ok(());
+            }
+            
+            visualizer.highlight_elements(elements, style, effect)?;
+            
+            let duration = start.elapsed();
+            info!(
+                duration_ms = duration.as_millis(),
+                "Elements highlighted"
+            );
+        } else {
+            warn!("Visualization engine not available");
+        }
+        
+        Ok(())
+    }
+    
+    /// Show a popup message on screen
+    #[instrument(skip(self, message, duration, style))]
+    pub fn show_popup(
+        &self,
+        message: &str,
+        duration: Duration,
+        style: Option<drawing::PopupStyle>,
+    ) -> Result<(), AutomationError> {
+        let start = Instant::now();
+        info!(message, ?duration, "Showing popup");
+        
+        if let Some(visualizer) = &self.visualizer {
+            if !visualizer.is_enabled() {
+                warn!("Visualization engine is not enabled");
+                return Ok(());
+            }
+            
+            visualizer.show_popup(message, duration, style)?;
+            
+            let duration = start.elapsed();
+            info!(
+                duration_ms = duration.as_millis(),
+                "Popup shown"
+            );
+        } else {
+            warn!("Visualization engine not available");
+        }
+        
+        Ok(())
+    }
+    
+    /// Start the visualization engine
+    #[instrument(skip(self))]
+    pub fn start_visualization(&mut self) -> Result<(), AutomationError> {
+        let start = Instant::now();
+        info!("Starting visualization engine");
+        
+        if let Some(visualizer) = &mut self.visualizer {
+            visualizer.start()?;
+            
+            let duration = start.elapsed();
+            info!(
+                duration_ms = duration.as_millis(),
+                "Visualization engine started"
+            );
+        } else {
+            warn!("Visualization engine not available");
+        }
+        
+        Ok(())
+    }
+    
+    /// Stop the visualization engine
+    #[instrument(skip(self))]
+    pub fn stop_visualization(&mut self) -> Result<(), AutomationError> {
+        let start = Instant::now();
+        info!("Stopping visualization engine");
+        
+        if let Some(visualizer) = &mut self.visualizer {
+            visualizer.stop()?;
+            
+            let duration = start.elapsed();
+            info!(
+                duration_ms = duration.as_millis(),
+                "Visualization engine stopped"
+            );
+        } else {
+            warn!("Visualization engine not available");
+        }
+        
+        Ok(())
+    }
+    
+    /// Toggle the visualization engine
+    #[instrument(skip(self))]
+    pub fn toggle_visualization(&mut self) -> Result<bool, AutomationError> {
+        let start = Instant::now();
+        info!("Toggling visualization engine");
+        
+        let result = if let Some(visualizer) = &mut self.visualizer {
+            let enabled = visualizer.toggle()?;
+            
+            let duration = start.elapsed();
+            info!(
+                duration_ms = duration.as_millis(),
+                enabled,
+                "Visualization engine toggled"
+            );
+            
+            Ok(enabled)
+        } else {
+            warn!("Visualization engine not available");
+            Ok(false)
+        };
+        
+        result
+    }
+    
+    /// Clear all visualizations
+    #[instrument(skip(self))]
+    pub fn clear_visualizations(&self) -> Result<(), AutomationError> {
+        let start = Instant::now();
+        info!("Clearing visualizations");
+        
+        if let Some(visualizer) = &self.visualizer {
+            if !visualizer.is_enabled() {
+                warn!("Visualization engine is not enabled");
+                return Ok(());
+            }
+            
+            visualizer.clear()?;
+            
+            let duration = start.elapsed();
+            info!(
+                duration_ms = duration.as_millis(),
+                "Visualizations cleared"
+            );
+        } else {
+            warn!("Visualization engine not available");
+        }
+        
+        Ok(())
     }
 }
