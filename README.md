@@ -1,121 +1,123 @@
-# terminator 🤖
+# Terminator Overlay Drawing System
 
+A high-performance, cross-platform overlay drawing system for Windows applications, designed to provide real-time visual feedback and UI element highlighting capabilities.
 
+## Features
 
-https://github.com/user-attachments/assets/00329105-8875-48cb-8970-a62a85a9ebd0
+- **Real-time Overlay Drawing**: Create transparent overlays for highlighting UI elements
+- **Multiple Highlight Styles**:
+  - Border highlighting with customizable thickness and color
+  - Fill highlighting with adjustable opacity
+  - Badge annotations with text in different corners
+- **Popup Notifications**: Display temporary messages with various styles:
+  - Info (blue)
+  - Success (green)
+  - Warning (orange)
+  - Error (red)
+  - Custom colors
+- **Platform-Specific Optimization**: Efficient Windows implementation using native Win32 API
+- **Thread-Safe Design**: Safe for use in multi-threaded applications
 
+## Architecture
 
+The system consists of two main components:
 
-<p style="text-align: center;">
-    <a href="https://discord.gg/dU9EBuw7Uq">
-        <img src="https://img.shields.io/discord/823813159592001537?color=5865F2&logo=discord&logoColor=white&style=flat-square" alt="Join us on Discord">
-    </a>
-    <a href="https://docs.screenpi.pe/terminator/introduction">
-        <img src="https://img.shields.io/badge/read_the-docs-blue" alt="docs">
-    </a>
-</p>
+1. **OverlayEngine**: The main entry point that manages the platform-specific renderer
+   - Handles initialization and lifecycle management
+   - Provides high-level API for highlighting and popup display
+   - Manages renderer state and threading
 
-**Terminator** is the fastest, AI-first, computer use SDK. It's designed to interact with native GUI applications on Windows using a Playwright-like API, like parsing a website. By leveraging OS-level accessibility APIs, Terminator is significantly faster and more reliable for AI agents than vision-based approaches, and can interact with background applications.
+2. **WindowsOverlayRenderer**: Windows-specific implementation
+   - Creates transparent, layered windows for overlay drawing
+   - Handles Windows messages and GDI drawing operations
+   - Manages highlight and popup queues
 
-> **⚠️ Experimental ⚠️:** Terminator is under active development. Expect bugs and breaking changes. Please report issues – we aim to fix them quickly!
+## Usage
 
-## OS Support
+### Basic Setup
 
-| Operating System | Support Status        | Key Characteristics                                                     |
-|------------------|-----------------------|-------------------------------------------------------------------------|
-| Windows          | ✅ **Active Focus**   | Full features, best performance, actively developed & documented.       |
-| macOS            | 🟡 **Partial**        | Core functionality available; community-driven, less documented.        |
-| Linux            | ❌ **No Support**     | Not currently supported.                                                |
+```rust
+use terminator::drawing::OverlayEngine;
 
-## Key Features
+// Create and initialize the engine
+let mut engine = OverlayEngine::new()?;
 
-*   **AI-First & Agentic:** Built from the ground up for modern AI agents and workflows.
-*   **Blazing Fast & Reliable:** Uses OS-level accessibility APIs, making it much faster and more robust than vision-based tools.
-*   **Playwright-Style API:** Offers a familiar, powerful, and developer-friendly interface.
-*   **Cross-Platform (Windows Focus):** Automate native GUI applications on Windows (primary) and macOS.
-*   **Deep UI Introspection:** Enables detailed understanding and control of complex UI elements.
-*   **Background App Interaction:** Capable of interacting with applications even if they are not in focus.
+// Start the overlay system
+engine.start()?;
+```
 
-## Benchmarks
+### Highlighting UI Elements
 
-The [benchmark test](./terminator/src/tests/e2e_tests.rs) illustrates how fast Terminator can query the UI. It finds all edit elements in about **80&nbsp;ms**, showcasing a big speed advantage over vision-based tools.
+```rust
+use terminator::drawing::{
+    HighlightStyle,
+    Color,
+};
 
-This [form-filling app](https://www.mediar.ai/) can read & fills forms as soon as you see them in <1s end-to-end using Gemini.
+// Highlight with default style (red border)
+engine.highlight_elements(&elements, None, None)?;
 
-## Demos
+// Custom border highlight
+let style = HighlightStyle::Border {
+    thickness: 3.0,
+    color: Color { r: 0, g: 255, b: 0, a: 255 }, // Green
+};
+engine.highlight_elements(&elements, Some(style), None)?;
+```
 
-Check out Terminator in action:
+### Displaying Popups
 
-- [📹 Desktop Copilot that autocompletes your work in real time](https://www.youtube.com/watch?v=FGywvWJY7wc)
-- [📹 AI Agent that process 100 insurance claims in 5 minutes](https://www.youtube.com/watch?v=6wMNNQFj_dw)
-- [📹 Technical Overview Video](https://youtu.be/ycS9G_jpl04)
-- [📹 Technical Overview: PDF to Windows Legacy App Form](https://www.youtube.com/watch?v=CMw3iexyCMI)
+```rust
+use std::time::Duration;
+use terminator::drawing::PopupStyle;
 
-## Documentation
+// Show info popup
+engine.show_popup(
+    "Operation completed",
+    Duration::from_secs(3),
+    Some(PopupStyle::Info)
+)?;
 
-For detailed information on features, installation, usage, and the API, please visit the **[Official Documentation](https://docs.screenpi.pe/terminator/introduction)**.
+// Custom styled popup
+let style = PopupStyle::Custom(
+    Color { r: 100, g: 0, b: 200, a: 200 }, // Background
+    Color { r: 255, g: 255, b: 255, a: 255 }, // Text
+);
+engine.show_popup(
+    "Custom message",
+    Duration::from_secs(2),
+    Some(style)
+)?;
+```
 
-## Quick Start
+## Platform Support
 
-Get up and running with Terminator:
+- ✅ Windows: Fully implemented
+- 🚧 macOS: Coming soon
+- 🚧 Linux: Coming soon
 
-1.  **Clone the repo:**
-    ```bash
-    git clone https://github.com/mediar-ai/terminator
-    cd terminator
-    ```
-2.  **Set up the server:**
-    *   **Windows:** Download & unzip the pre-built server using PowerShell:
-        ```powershell
-        powershell -ExecutionPolicy Bypass -File .\setup_windows.ps1
-        ```
-    *   **macOS:** Compile the server using Rust/Cargo (ensure Rust and Xcode Command Line Tools are installed):
-        ```bash
-        cargo build --release --package server
-        ```
-3.  **Run the server:**
-    *   **Windows:**
-        ```powershell
-        ./server_release/server.exe --debug
-        ```
-    *   **macOS:**
-        ```bash
-        ./target/release/examples/server --debug
-        ```
-4.  **Run an example client (in a separate terminal):**
-    Navigate to the example directory, install dependencies, and run:
-    ```bash
-    cd examples/hello-world
-    npm i
-    npm run dev
-    # Then, open http://localhost:3000 in your browser
-    ```
+## Building
 
-For more details, see the [Getting Started Guide](https://docs.screenpi.pe/terminator/getting-started) in the docs.
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/terminator.git
+cd terminator
 
-## Explore Further
+# Build the project
+cargo build --release
+```
 
--   **Vercel AI SDK Example:** Learn how to use Terminator with AI in the [PDF-to-Form example](https://github.com/mediar-ai/terminator/tree/main/examples/pdf-to-form).
--   **MCP:** Discover [how to Vibe Work using MCP](https://github.com/mediar-ai/terminator/tree/main/mcp).
+## Requirements
 
-## Technical Details & Debugging
+- Rust 1.56 or higher
+- Windows 10 or higher (for Windows implementation)
+- Windows SDK (for Windows builds)
 
-### Key Dependencies
-*   **Windows:** [uiautomation-rs](https://github.com/leexgone/uiautomation-rs)
-*   **macOS:** Native macOS Accessibility API (exploring [cidre](https://github.com/yury/cidre) as an alternative)
+## Contributing
 
-### Debugging Tools
-*   **Windows:**
-    *   [Accessibility Insights for Windows](https://accessibilityinsights.io/downloads/)
-    *   **FlaUInspect:** A recommended alternative for inspecting UI Automation properties on Windows.
-        *   Install: `choco install flauinspect` or download from [FlaUI/FlaUInspect releases](https://github.com/FlaUI/FlaUInspect/releases).
-        *   Usage: Launch `FlaUInspect.exe`, hover or click on elements to see properties like `AutomationId`, `Name`, and `ControlType`. This is great for debugging selectors.
+Contributions are welcome! Please feel free to submit pull requests.
 
-## contributing
+## License
 
-contributions are welcome! please feel free to submit issues and pull requests. many parts are experimental, and help is appreciated. join our [discord](https://discord.gg/dU9EBuw7Uq) to discuss.
-
-## businesses 
-
-if you want desktop automation at scale for your business, [let's talk](https://mediar.ai)
+This project is licensed under the MIT License - see the LICENSE file for details.
 
